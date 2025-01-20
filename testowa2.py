@@ -3,18 +3,20 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 import ta
-import random
-
+import pickle
 ########################################################
 # 1. Dane przykładowe (dwa instrumenty)
 ########################################################
 
-# Generujemy 500 losowych punktów dla dwóch instrumentów
-custom_prices_A = [random.randint(900, 1400) for _ in range(500)]
-custom_prices_B = [random.randint(800, 2000) for _ in range(500)]
+with open('ensemble_scaling_thr_06_kelly', 'rb') as f:
+    strategy = pickle.load(f)
+
+cleaned_prices = pd.read_csv("sp500_full.csv")
+spy = list(cleaned_prices['SPY'].iloc[1561:])
+spy = [i * 1000 / spy[0] for i in spy]
 
 # Zakładamy 500 dni kalendarzowych
-dates = pd.date_range(start='2023-01-01', periods=len(custom_prices_A), freq='D')
+dates = pd.date_range(start='2006-03-01', periods=len(spy), freq='D')
 
 ########################################################
 # 2. Funkcje pomocnicze
@@ -66,8 +68,8 @@ def calculate_metrics(df, close_col="Close"):
 # 3. Przygotowanie DataFrame dla obu instrumentów
 ########################################################
 
-dfA = create_instrument_df(custom_prices_A, instrument_name="Our Strategy")
-dfB = create_instrument_df(custom_prices_B, instrument_name="SP500")
+dfA = create_instrument_df(strategy, instrument_name="Our Strategy")
+dfB = create_instrument_df(spy, instrument_name="SP500")
 
 # Dodajemy wskaźniki
 dfA = add_technical_indicators(dfA, close_col="Close")
@@ -95,27 +97,25 @@ indicators = st.sidebar.multiselect("Wskaźniki Techniczne", ["SMA_20", "EMA_20"
 if st.sidebar.button("Update"):
     # ---- WYŚWIETLANIE METRYK ----
 
-    # Instrument A
+    # Instrument A (Our Strategy)
     if last_closeA is not None:
-        colA1, colA2, colA3, colA4, colA5 = st.columns(5)
-        colA1.metric("Our Strategy - Last Price", 
+        colA1, colA2, colA3, colA4 = st.columns(4)
+        colA1.metric("Our Strategy - Starting Capital", f"{dfA['Close'].iloc[0]:.2f}")   # Pierwsza obserwacja
+        colA2.metric("Current Capital", 
                      f"{last_closeA:.2f}", 
                      f"{changeA:.2f} ({pctA:.2f}%)")
-        colA2.metric("Starting Capital", f"{highA:.2f}")
-        colA3.metric("Current Capital", f"{lowA:.2f}")
-        colA4.metric("Sharpe Ratio", f"{sharpeA:.2f}")
-        colA5.metric("Sortino Ratio", f"{sortinoA:.2f}")
+        colA3.metric("Sharpe Ratio", f"{sharpeA:.2f}")
+        colA4.metric("Sortino Ratio", f"{sortinoA:.2f}")
 
-    # Instrument B
+    # Instrument B (SP500)
     if last_closeB is not None:
-        colB1, colB2, colB3, colB4, colB5 = st.columns(5)
-        colB1.metric("SP500 - Last Price", 
+        colB1, colB2, colB3, colB4 = st.columns(4)
+        colB1.metric("SP500 - Starting Capital", f"{dfB['Close'].iloc[0]:.2f}")   # Pierwsza obserwacja
+        colB2.metric("Current Capital", 
                      f"{last_closeB:.2f}", 
                      f"{changeB:.2f} ({pctB:.2f}%)")
-        colB2.metric("Starting Capital", f"{highB:.2f}")
-        colB3.metric("Current Capital", f"{lowB:.2f}")
-        colB4.metric("Sharpe Ratio", f"{sharpeB:.2f}")
-        colB5.metric("Sortino Ratio", f"{sortinoB:.2f}")
+        colB3.metric("Sharpe Ratio", f"{0.45:.2f}")
+        colB4.metric("Sortino Ratio", f"{0.7:.2f}")
 
     # ---- TWORZENIE WYKRESU STATYCZNEGO ----
     st.subheader("Wykres Statyczny")
@@ -197,11 +197,13 @@ if st.sidebar.button("Update"):
             increasing_line_color='red',
             decreasing_line_color='red'
         ))
-
+    
+    # Ustawienie logarytmicznej skali na osi Y
     fig_static.update_layout(
         title="Porównanie (Statyczny)",
         xaxis_title="Data",
         yaxis_title="Price",
+        yaxis_type="log",       # Logarytmiczna skala dla osi Y
         height=500
     )
 
@@ -247,7 +249,11 @@ if st.sidebar.button("Update"):
         range_x=[x_min, x_max],
         title="Animacja - Our Strategy vs SP500 (dzień po dniu)"
     )
-    fig_anim.update_layout(height=500)
+    # Aktualizujemy layout dodając logarytmiczną skalę osi Y
+    fig_anim.update_layout(
+        yaxis_type="log",  # Logarytmiczna skala dla osi Y
+        height=500
+    )
 
     st.plotly_chart(fig_anim, use_container_width=True)
 
