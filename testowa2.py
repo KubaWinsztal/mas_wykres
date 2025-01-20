@@ -4,10 +4,13 @@ import plotly.express as px
 import pandas as pd
 import ta
 import pickle
+import numpy as np
+
 ########################################################
 # 1. Dane przykładowe (dwa instrumenty)
 ########################################################
 
+# Wczytanie strategii z pliku (upewnij się, że plik istnieje i ma odpowiednią nazwę)
 with open('ensemble_scaling_thr_06_kelly', 'rb') as f:
     strategy = pickle.load(f)
 
@@ -15,7 +18,7 @@ cleaned_prices = pd.read_csv("sp500_full.csv")
 spy = list(cleaned_prices['SPY'].iloc[1561:])
 spy = [i * 1000 / spy[0] for i in spy]
 
-# Zakładamy 500 dni kalendarzowych
+# Zakładamy kalendarzowy zakres dat dopasowany do długości listy spy
 dates = pd.date_range(start='2006-03-01', periods=len(spy), freq='D')
 
 ########################################################
@@ -40,8 +43,7 @@ def create_instrument_df(prices, instrument_name):
 
 def add_technical_indicators(df, close_col="Close"):
     """
-    Dodaje przykładowe wskaźniki SMA i EMA (z oknem=3 dla krótkich danych).
-    Możesz zmienić na większe okno np. 20, 50 w zależności od potrzeb.
+    Dodaje wskaźniki SMA i EMA (z oknem=3 dla przykładowych danych).
     """
     df["SMA_20"] = ta.trend.sma_indicator(df[close_col], window=3)
     df["EMA_20"] = ta.trend.ema_indicator(df[close_col], window=3)
@@ -49,7 +51,7 @@ def add_technical_indicators(df, close_col="Close"):
 
 def calculate_metrics(df, close_col="Close"):
     """
-    Oblicza proste metryki: last_close, zmiana, % zmiana, high, low, sharpe, sortino.
+    Oblicza metryki: last_close, zmiana, % zmiana, high, low, sharpe, sortino.
     """
     if df.empty:
         return None, None, None, None, None, None, None
@@ -59,7 +61,7 @@ def calculate_metrics(df, close_col="Close"):
     pct_change = (change / prev_close) * 100
     high = df["High"].max()
     low = df["Low"].min()
-    # Przykładowe wartości Sharpe/Sortino – w realnych warunkach licz je naprawdę.
+    # Przykładowe wartości; w realnej analizie liczymy je na podstawie danych
     sharpe = 1.3
     sortino = 3.38
     return last_close, change, pct_change, high, low, sharpe, sortino
@@ -71,27 +73,37 @@ def calculate_metrics(df, close_col="Close"):
 dfA = create_instrument_df(strategy, instrument_name="Our Strategy")
 dfB = create_instrument_df(spy, instrument_name="SP500")
 
-# Dodajemy wskaźniki
+# Dodanie wskaźników technicznych
 dfA = add_technical_indicators(dfA, close_col="Close")
 dfB = add_technical_indicators(dfB, close_col="Close")
 
-# Obliczamy metryki
+# Obliczenie metryk
 last_closeA, changeA, pctA, highA, lowA, sharpeA, sortinoA = calculate_metrics(dfA)
 last_closeB, changeB, pctB, highB, lowB, sharpeB, sortinoB = calculate_metrics(dfB)
 
-# Łączymy do jednego DF (zawiera dane obu instrumentów)
+# Połączenie danych obu instrumentów w jeden DataFrame
 df_combined = pd.concat([dfA, dfB], ignore_index=True).sort_values("Datetime")
 df_combined.reset_index(drop=True, inplace=True)
 
 ########################################################
-# 4. Streamlit – panel boczny i wykres statyczny
+# Przygotowanie ticków dla osi logarytmicznej
+########################################################
+
+min_val = df_combined["Close"].min()
+max_val = df_combined["Close"].max()
+tick_exponents = np.arange(np.floor(np.log10(min_val)), np.ceil(np.log10(max_val)) + 1)
+tick_vals = [10**int(e) for e in tick_exponents]
+tick_text = [str(10**int(e)) for e in tick_exponents]
+
+########################################################
+# 4. Streamlit – panel boczny i wykresy
 ########################################################
 
 st.set_page_config(layout="wide")
-st.title("Nasza Strategia vs. SP500 – Statycznie i Animowanie")
+st.title("Nasza Strategia vs. SP500")
 
-st.sidebar.header("Ustawienia Wykresu (statycznego)")
-chart_type = st.sidebar.selectbox("Typ Wykresu", ["Line", "Candlestick"])
+st.sidebar.header("Ustawienia wykresu")
+chart_type = st.sidebar.selectbox("Typ wykresu", ["Line", "Candlestick"])
 indicators = st.sidebar.multiselect("Wskaźniki Techniczne", ["SMA_20", "EMA_20"])
 
 if st.sidebar.button("Update"):
@@ -100,20 +112,16 @@ if st.sidebar.button("Update"):
     # Instrument A (Our Strategy)
     if last_closeA is not None:
         colA1, colA2, colA3, colA4 = st.columns(4)
-        colA1.metric("Our Strategy - Starting Capital", f"{dfA['Close'].iloc[0]:.2f}")   # Pierwsza obserwacja
-        colA2.metric("Current Capital", 
-                     f"{last_closeA:.2f}", 
-                     f"{changeA:.2f} ({pctA:.2f}%)")
+        colA1.metric("Our Strategy - Starting Capital", f"{dfA['Close'].iloc[0]:.2f}")
+        colA2.metric("Current Capital", f"{last_closeA:.2f}", f"{changeA:.2f} ({pctA:.2f}%)")
         colA3.metric("Sharpe Ratio", f"{sharpeA:.2f}")
         colA4.metric("Sortino Ratio", f"{sortinoA:.2f}")
 
     # Instrument B (SP500)
     if last_closeB is not None:
         colB1, colB2, colB3, colB4 = st.columns(4)
-        colB1.metric("SP500 - Starting Capital", f"{dfB['Close'].iloc[0]:.2f}")   # Pierwsza obserwacja
-        colB2.metric("Current Capital", 
-                     f"{last_closeB:.2f}", 
-                     f"{changeB:.2f} ({pctB:.2f}%)")
+        colB1.metric("SP500 - Starting Capital", f"{dfB['Close'].iloc[0]:.2f}")
+        colB2.metric("Current Capital", f"{last_closeB:.2f}", f"{changeB:.2f} ({pctB:.2f}%)")
         colB3.metric("Sharpe Ratio", f"{0.45:.2f}")
         colB4.metric("Sortino Ratio", f"{0.7:.2f}")
 
@@ -142,7 +150,7 @@ if st.sidebar.button("Update"):
             line=dict(color='red')
         ))
 
-        # Dodawanie wybranych wskaźników
+        # Dodawanie wskaźników technicznych
         for ind in indicators:
             if ind == "SMA_20":
                 fig_static.add_trace(go.Scatter(
@@ -174,9 +182,8 @@ if st.sidebar.button("Update"):
                     name="EMA_20 (SP500)",
                     line=dict(color='red', dash='dot')
                 ))
-
     else:
-        # Candlestick - 2 instrumenty na jednym wykresie (nakładają się)
+        # Wykres candlestick
         fig_static.add_trace(go.Candlestick(
             x=dfA_sorted["Datetime"],
             open=dfA_sorted["Open"],
@@ -198,47 +205,43 @@ if st.sidebar.button("Update"):
             decreasing_line_color='red'
         ))
     
-    # Ustawienie logarytmicznej skali na osi Y
+    # Ustawienie logarytmicznej skali osi Y wraz z etykietami
     fig_static.update_layout(
         title="Porównanie (Statyczny)",
         xaxis_title="Data",
-        yaxis_title="Price",
-        yaxis_type="log",       # Logarytmiczna skala dla osi Y
+        yaxis=dict(
+            title="Price",
+            type="log",
+            tickvals=tick_vals,
+            ticktext=tick_text
+        ),
         height=500
     )
 
     st.plotly_chart(fig_static, use_container_width=True)
 
     ########################################################
-    # 5. WYKRES ANIMOWANY (z tymi samymi danymi)
+    # 5. WYKRES ANIMOWANY (z danymi)
     ########################################################
     st.markdown("---")
     st.header("Wykres Dynamiczny")
 
-    # Tworzymy listę klatek animacji opartą na unikalnych datach,
-    # aby animacja pokazywała stopniowo dane dzień po dniu
+    # Tworzenie klatek animacji (każda klatka = dane do określonej daty)
     unique_dates = sorted(df_combined["Datetime"].unique())
     df_anim_list = []
-
     for i, date_i in enumerate(unique_dates):
-        # Bierzemy wszystkie wiersze z datą <= obecnej dacie 'date_i'
         subset = df_combined[df_combined["Datetime"] <= date_i].copy()
-        # Ustawiamy numer klatki
         subset["frame"] = i  
         df_anim_list.append(subset)
-
-    # Łączymy wszystkie subsety w jeden DataFrame
     df_anim = pd.concat(df_anim_list, ignore_index=True)
 
-    # Stały zakres Y, żeby wykres nie "skakał"
+    # Ustalenie stałych zakresów dla osi
     y_min = df_combined["Close"].min() - 50
     y_max = df_combined["Close"].max() + 50
-
-    # Możemy też ustawić range_x, żeby oś X się nie zmieniała
     x_min = df_combined["Datetime"].min()
     x_max = df_combined["Datetime"].max()
 
-    # Tworzymy wykres animowany
+    # Tworzenie wykresu animowanego
     fig_anim = px.line(
         df_anim,
         x="Datetime",
@@ -249,9 +252,13 @@ if st.sidebar.button("Update"):
         range_x=[x_min, x_max],
         title="Animacja - Our Strategy vs SP500 (dzień po dniu)"
     )
-    # Aktualizujemy layout dodając logarytmiczną skalę osi Y
+    # Ustawienie logarytmicznej skali osi Y na wykresie animowanym
     fig_anim.update_layout(
-        yaxis_type="log",  # Logarytmiczna skala dla osi Y
+        yaxis=dict(
+            type="log",
+            tickvals=tick_vals,
+            ticktext=tick_text
+        ),
         height=500
     )
 
@@ -261,8 +268,7 @@ if st.sidebar.button("Update"):
     **Instrukcja**:
     - Kliknij "Play" (ikonka w lewym dolnym rogu wykresu) 
       lub użyj suwaka "frame" do przeglądania kolejnych dni.
-    - Obie linie narastają jednocześnie – 
-      w klatce nr i widać dane od początku do i-tego dnia.
+    - Obie linie narastają jednocześnie – w każdej klatce widoczne są dane od początku do wybranej daty.
     """)
 
 else:
