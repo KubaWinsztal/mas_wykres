@@ -18,6 +18,8 @@ cleaned_prices = pd.read_csv("sp500_full.csv")
 spy = list(cleaned_prices['SPY'].iloc[1561:])
 spy = [i * 1000 / spy[0] for i in spy]
 
+strategy = strategy[::10]
+spy = spy[::10]
 # Zakładamy kalendarzowy zakres dat dopasowany do długości listy spy
 dates = pd.date_range(start='2006-03-01', periods=len(spy), freq='D')
 
