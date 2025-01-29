@@ -22,7 +22,7 @@ strategy = strategy[::10]
 spy = spy[::10]
 
 # Dostosowanie zakresu dat do długości przefiltrowanych danych
-dates = pd.date_range(start='2006-03-01', periods=len(strategy), freq='D')
+dates = pd.date_range(start='2006-03-01', periods=len(strategy), freq='W')
 
 ########################################################
 # 2. Funkcje pomocnicze
