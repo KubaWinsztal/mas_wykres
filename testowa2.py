@@ -20,8 +20,9 @@ spy = [i * 1000 / spy[0] for i in spy]
 
 strategy = strategy[::10]
 spy = spy[::10]
-# Zakładamy kalendarzowy zakres dat dopasowany do długości listy spy
-dates = pd.date_range(start='2006-03-01', periods=len(spy), freq='D')
+
+# Dostosowanie zakresu dat do długości przefiltrowanych danych
+dates = pd.date_range(start='2006-03-01', periods=len(strategy), freq='D')
 
 ########################################################
 # 2. Funkcje pomocnicze
@@ -72,7 +73,7 @@ def calculate_metrics(df, close_col="Close"):
 # 3. Przygotowanie DataFrame dla obu instrumentów
 ########################################################
 
-dfA = create_instrument_df(strategy, instrument_name="Our Strategy")
+dfA = create_instrument_df(strategy, instrument_name="Nasza Strategia")
 dfB = create_instrument_df(spy, instrument_name="SP500")
 
 # Dodanie wskaźników technicznych
@@ -114,7 +115,7 @@ if st.sidebar.button("Update"):
     # Instrument A (Our Strategy)
     if last_closeA is not None:
         colA1, colA2, colA3, colA4 = st.columns(4)
-        colA1.metric("Our Strategy - Starting Capital", f"{dfA['Close'].iloc[0]:.2f}")
+        colA1.metric("Nasza Strategia - Kapitał Początkowy", f"{dfA['Close'].iloc[0]:.2f}")
         colA2.metric("Current Capital", f"{last_closeA:.2f}", f"{changeA:.2f} ({pctA:.2f}%)")
         colA3.metric("Sharpe Ratio", f"{sharpeA:.2f}")
         colA4.metric("Sortino Ratio", f"{sortinoA:.2f}")
@@ -122,7 +123,7 @@ if st.sidebar.button("Update"):
     # Instrument B (SP500)
     if last_closeB is not None:
         colB1, colB2, colB3, colB4 = st.columns(4)
-        colB1.metric("SP500 - Starting Capital", f"{dfB['Close'].iloc[0]:.2f}")
+        colB1.metric("SP500 - Kapitał Początkowy", f"{dfB['Close'].iloc[0]:.2f}")
         colB2.metric("Current Capital", f"{last_closeB:.2f}", f"{changeB:.2f} ({pctB:.2f}%)")
         colB3.metric("Sharpe Ratio", f"{0.45:.2f}")
         colB4.metric("Sortino Ratio", f"{0.7:.2f}")
@@ -192,7 +193,7 @@ if st.sidebar.button("Update"):
             high=dfA_sorted["High"],
             low=dfA_sorted["Low"],
             close=dfA_sorted["Close"],
-            name="Our Strategy",
+            name="Nasza Strategia",
             increasing_line_color='blue',
             decreasing_line_color='blue'
         ))
@@ -209,10 +210,10 @@ if st.sidebar.button("Update"):
     
     # Ustawienie logarytmicznej skali osi Y wraz z etykietami
     fig_static.update_layout(
-        title="Porównanie (Statyczny)",
+        title="Rynek Akcji",
         xaxis_title="Data",
         yaxis=dict(
-            title="Price",
+            title="Cena",
             type="log",
             tickvals=tick_vals,
             ticktext=tick_text
@@ -245,15 +246,20 @@ if st.sidebar.button("Update"):
 
     # Tworzenie wykresu animowanego
     fig_anim = px.line(
+        title='Rynek Krypto',
         df_anim,
         x="Datetime",
-        y="Close",
+        y="Cena",
         color="Instrument",
         animation_frame="frame",
         range_y=[y_min, y_max],
         range_x=[x_min, x_max],
-        title="Animacja - Our Strategy vs SP500 (dzień po dniu)"
+        color_discrete_map={
+            "Nasza Strategia": "blue",  # Kolor dla "Nasza Strategia"
+            "SP500": "red"              # Kolor dla "SP500"
+        }
     )
+
     # Ustawienie logarytmicznej skali osi Y na wykresie animowanym
     fig_anim.update_layout(
         yaxis=dict(
@@ -265,13 +271,3 @@ if st.sidebar.button("Update"):
     )
 
     st.plotly_chart(fig_anim, use_container_width=True)
-
-    st.write("""
-    **Instrukcja**:
-    - Kliknij "Play" (ikonka w lewym dolnym rogu wykresu) 
-      lub użyj suwaka "frame" do przeglądania kolejnych dni.
-    - Obie linie narastają jednocześnie – w każdej klatce widoczne są dane od początku do wybranej daty.
-    """)
-
-else:
-    st.info("Kliknij 'Update' w panelu bocznym, aby zobaczyć wykresy i animację.")
