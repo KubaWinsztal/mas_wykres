@@ -245,9 +245,7 @@ if st.sidebar.button("Update"):
     x_max = df_combined["Datetime"].max()
 
     # Tworzenie wykresu animowanego
-    # Tworzenie wykresu animowanego
     fig_anim = px.line(
-        title='Rynek Krypto',
         df_anim,
         x="Datetime",
         y="Cena",
@@ -258,7 +256,8 @@ if st.sidebar.button("Update"):
         color_discrete_map={
             "Nasza Strategia": "blue",  # Kolor dla "Nasza Strategia"
             "SP500": "red"              # Kolor dla "SP500"
-        }
+        },
+        title='Rynek Krypto'
     )
 
     # Ustawienie logarytmicznej skali osi Y na wykresie animowanym
