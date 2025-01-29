@@ -248,7 +248,7 @@ if st.sidebar.button("Update"):
     fig_anim = px.line(
         df_anim,
         x="Datetime",
-        y="Cena",
+        y="Close",  # Zmienione z "Cena" na "Close"
         color="Instrument",
         animation_frame="frame",
         range_y=[y_min, y_max],
