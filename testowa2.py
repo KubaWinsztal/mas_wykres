@@ -245,6 +245,7 @@ if st.sidebar.button("Update"):
     x_max = df_combined["Datetime"].max()
 
     # Tworzenie wykresu animowanego
+    # Tworzenie wykresu animowanego
     fig_anim = px.line(
         title='Rynek Krypto',
         df_anim,
