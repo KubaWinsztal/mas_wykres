@@ -112,7 +112,7 @@ indicators = st.sidebar.multiselect("Wskaźniki Techniczne", ["SMA_20", "EMA_20"
 if st.sidebar.button("Update"):
     # ---- WYŚWIETLANIE METRYK ----
 
-    # Instrument A (Our Strategy)
+    # Instrument A (Nasza Strategia)
     if last_closeA is not None:
         colA1, colA2, colA3, colA4 = st.columns(4)
         colA1.metric("Nasza Strategia - Kapitał Początkowy", f"{dfA['Close'].iloc[0]:.2f}")
@@ -141,7 +141,7 @@ if st.sidebar.button("Update"):
             x=dfA_sorted["Datetime"],
             y=dfA_sorted["Close"],
             mode='lines',
-            name="Our Strategy",
+            name="Nasza Strategia",
             line=dict(color='blue')
         ))
         # Instrument B (czerwony)
@@ -160,7 +160,7 @@ if st.sidebar.button("Update"):
                     x=dfA_sorted["Datetime"],
                     y=dfA_sorted["SMA_20"],
                     mode='lines',
-                    name="SMA_20 (Our Strat.)",
+                    name="SMA_20 (Nasza Strategia)",
                     line=dict(color='blue', dash='dash')
                 ))
                 fig_static.add_trace(go.Scatter(
@@ -175,7 +175,7 @@ if st.sidebar.button("Update"):
                     x=dfA_sorted["Datetime"],
                     y=dfA_sorted["EMA_20"],
                     mode='lines',
-                    name="EMA_20 (Our Strat.)",
+                    name="EMA_20 (Nasza Strategia)",
                     line=dict(color='blue', dash='dot')
                 ))
                 fig_static.add_trace(go.Scatter(
