@@ -251,7 +251,7 @@ if st.sidebar.button("Update"):
         y="Close",  # Zmienione z "Cena" na "Close"
         color="Instrument",
         animation_frame="frame",
-        range_y=[y_min, y_max],
+        range_y=[0, 600000],
         range_x=[x_min, x_max],
         color_discrete_map={
             "Nasza Strategia": "blue",  # Kolor dla "Nasza Strategia"
