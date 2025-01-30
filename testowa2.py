@@ -269,5 +269,6 @@ if st.sidebar.button("Update"):
         ),
         height=500
     )
-
+    fig_anim.layout.updatemenus[0].buttons[0].args[1]['frame']['duration'] = 50
+    fig_anim.layout.updatemenus[0].buttons[0].args[1]['transition']['duration'] = 30
     st.plotly_chart(fig_anim, use_container_width=True)
